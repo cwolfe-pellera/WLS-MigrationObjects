@@ -1,0 +1,21 @@
+{
+	"@type":"Process",
+	"Name":"aws_PostEvent",
+	"HasSecurityAccess":false,
+	"Code@Code.link":"aws_PostEvent.ti",
+	"DataSource":
+	{
+		"Type":"None"
+	},
+	"Parameters":
+	[
+		{
+			"Name":"EventBody",
+			"Prompt":"Event body (JSON)",
+			"Value":"",
+			"Type":"String"
+		}
+	],
+	"Variables":[],
+	"VariablesUIData": []
+}

@@ -1,0 +1,24 @@
+{
+	"@type":"Hierarchy",
+	"Name":"Pyxis Config Measure",
+	"Elements":
+	[
+		{
+			"Name":"API URL",
+			"Type":"String"
+		},
+		{
+			"Name":"API Key",
+			"Type":"String"
+		},
+		{
+			"Name":"Tenant ID",
+			"Type":"String"
+		},
+		{
+			"Name":"Instance Name",
+			"Type":"String"
+		}
+	],
+	"Subsets@Code.links":[]
+}

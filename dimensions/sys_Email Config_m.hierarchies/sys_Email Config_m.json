@@ -1,0 +1,12 @@
+{
+	"@type":"Hierarchy",
+	"Name":"sys_Email Config_m",
+	"Elements":
+	[
+		{
+			"Name":"Recipients",
+			"Type":"String"
+		}
+	],
+	"Subsets@Code.links":[]
+}

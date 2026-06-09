@@ -1,0 +1,12 @@
+{
+	"@type":"Dimension",
+	"Name":"sys.Processes",
+	"Hierarchies@Code.links":
+	[
+		"sys.Processes.hierarchies/sys.Processes.json"
+	],
+	"DefaultHierarchy":
+	{
+		"@id":"Dimensions('sys.Processes')/Hierarchies('sys.Processes')"
+	}
+}

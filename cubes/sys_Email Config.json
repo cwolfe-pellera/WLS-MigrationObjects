@@ -1,0 +1,14 @@
+{
+	"@type":"Cube",
+	"Name":"sys_Email Config",
+	"Dimensions":
+	[
+		{
+			"@id":"Dimensions('sys.Processes')"
+		},
+		{
+			"@id":"Dimensions('sys_Email Config_m')"
+		}
+	],
+	"Views@Code.links":[]
+}

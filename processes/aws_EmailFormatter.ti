@@ -1,0 +1,413 @@
+#region Prolog
+
+#==============================================================================
+#                             aws_EmailFormatter
+#
+#  Reads a delimited text file and converts it to an HTML email body.
+#
+#  Intended to be called from aws_SendMail when:
+#      pnFormatFileAsHTMLTable = 1
+#
+#  Return values are passed back using global variables:
+#      gsEmailFormatterStatus   = OK / ERROR
+#      gsEmailFormatterMessage  = formatted HTML body
+#      gsEmailFormatterError    = error text
+#
+#==============================================================================
+#==============================================================================
+#                     COMMON HEADER COLOR SETTINGS
+#==============================================================================
+# These are suggested values for:
+#     psHeaderColor
+#     psHeaderFontColor
+#
+# Blue:
+#     psHeaderColor     = '#0070C0';
+#     psHeaderFontColor = '#FFFFFF';
+#
+# Dark Blue:
+#     psHeaderColor     = '#1F4E78';
+#     psHeaderFontColor = '#FFFFFF';
+#
+# Green:
+#     psHeaderColor     = '#548235';
+#     psHeaderFontColor = '#FFFFFF';
+#
+# Orange:
+#     psHeaderColor     = '#ED7D31';
+#     psHeaderFontColor = '#FFFFFF';
+#
+# Red:
+#     psHeaderColor     = '#C00000';
+#     psHeaderFontColor = '#FFFFFF';
+#
+# Gray:
+#     psHeaderColor     = '#595959';
+#     psHeaderFontColor = '#FFFFFF';
+#
+# Light Gray:
+#     psHeaderColor     = '#D9EAD3';
+#     psHeaderFontColor = '#000000';
+#
+# Gold:
+#     psHeaderColor     = '#BF9000';
+#     psHeaderFontColor = '#FFFFFF';
+#
+# Purple:
+#     psHeaderColor     = '#7030A0';
+#     psHeaderFontColor = '#FFFFFF';
+#
+# Default / Georgia Red:
+#     psHeaderColor     = '#BA0C2F';
+#     psHeaderFontColor = '#FFFFFF';
+#==============================================================================
+
+#==============================================================================
+#                           SYNCHRONIZATION
+#==============================================================================
+If( TRIM( psSync ) @<> '' );
+    SYNCHRONIZED( psSync );
+EndIf;
+
+
+#==============================================================================
+#                           CONFIGURATION SECTION
+#==============================================================================
+
+sProcessName = GetProcessName();
+sTimeStamp   = TIMST( NOW, '\Y-\m-\d(\h\i\s)' );
+sUniqueID    = NumberToString( INT( RAND() * 10000 ) );
+sUniqueName  = Expand( '%sProcessName%_%sTimeStamp%_%sUniqueID%' );
+
+sLogPath = '/Logs/Processes/';
+sLogFile = sLogPath | sUniqueName | '.log';
+
+FALSE = 0;
+TRUE  = 1;
+
+
+#==============================================================================
+#                           GLOBAL RETURN VALUES
+#==============================================================================
+
+StringGlobalVariable( 'gsEmailFormatterStatus' );
+StringGlobalVariable( 'gsEmailFormatterMessage' );
+StringGlobalVariable( 'gsEmailFormatterError' );
+
+gsEmailFormatterStatus  = '';
+gsEmailFormatterMessage = '';
+gsEmailFormatterError   = '';
+
+
+#==============================================================================
+#                           VALIDATE INPUTS
+#==============================================================================
+
+nContinue = TRUE;
+
+If( TRIM( psSourceFile ) @= '' );
+    gsEmailFormatterStatus = 'ERROR';
+    gsEmailFormatterError  = 'psSourceFile is blank.';
+    nContinue = FALSE;
+EndIf;
+
+# If( nContinue = TRUE );
+#     If( FileExists( psSourceFile ) = 0 );
+#         gsEmailFormatterStatus = 'ERROR';
+#         gsEmailFormatterError  = 'Source file does not exist: ' | psSourceFile;
+#         nContinue = FALSE;
+#     EndIf;
+# EndIf;
+
+If( nContinue = TRUE );
+    If( TRIM( psDelimiter ) @= '' );
+        gsEmailFormatterStatus = 'ERROR';
+        gsEmailFormatterError  = 'psDelimiter is blank.';
+        nContinue = FALSE;
+    EndIf;
+EndIf;
+
+If( nContinue = TRUE );
+    If( pnFontSizePx <= 0 );
+        gsEmailFormatterStatus = 'ERROR';
+        gsEmailFormatterError  = 'pnFontSizePx must be greater than zero.';
+        nContinue = FALSE;
+    EndIf;
+EndIf;
+
+If( nContinue = TRUE );
+    If( pnTableWidthPct <= 0 );
+        gsEmailFormatterStatus = 'ERROR';
+        gsEmailFormatterError  = 'pnTableWidthPct must be greater than zero.';
+        nContinue = FALSE;
+    EndIf;
+EndIf;
+
+If( nContinue = TRUE );
+    If( pnMessageColumnWidthPct <= 0 );
+        gsEmailFormatterStatus = 'ERROR';
+        gsEmailFormatterError  = 'pnMessageColumnWidthPct must be greater than zero.';
+        nContinue = FALSE;
+    EndIf;
+EndIf;
+
+
+#==============================================================================
+#                           BUILD HTML STYLES
+#==============================================================================
+
+If( nContinue = TRUE );
+
+    sTableStyle =
+        'border-collapse:collapse;' |
+        'font-family:' | psFontFamily | ';' |
+        'font-size:' | NumberToString( pnFontSizePx ) | 'px;' |
+        'width:' | NumberToString( pnTableWidthPct ) | '%;';
+
+    sHeaderCellStyle =
+        'border:1px solid ' | psBorderColor | ';' |
+        'padding:6px;' |
+        'text-align:center;' |
+        'background-color:' | psHeaderColor | ';' |
+        'color:' | psHeaderFontColor | ';';
+
+    sCenterCellStyle =
+        'border:1px solid ' | psBorderColor | ';' |
+        'padding:6px;' |
+        'text-align:center;' |
+        'white-space:nowrap;';
+
+    sMessageCellStyle =
+        'border:1px solid ' | psBorderColor | ';' |
+        'padding:6px;' |
+        'text-align:left;' |
+        'width:' | NumberToString( pnMessageColumnWidthPct ) | '%;' |
+        'white-space:normal;' |
+        'word-break:break-word;';
+
+EndIf;
+
+
+#==============================================================================
+#                           INITIALIZE HTML BODY
+#==============================================================================
+
+If( nContinue = TRUE );
+
+    sIntroMessage = psMessage;
+
+    sHTML =
+        '<html><body>' |
+        '<p>' | sIntroMessage | '</p>' |
+        '<table style=''' | sTableStyle | '''>';
+
+EndIf;
+
+
+#==============================================================================
+#                           INITIALIZE ROW TRACKING
+#==============================================================================
+
+nRowCount     = 0;
+nColumnCount  = 0;
+nHeaderLoaded = 0;
+
+
+#==============================================================================
+#                           SET DATA SOURCE
+#==============================================================================
+
+If( nContinue = TRUE );
+
+    # --- Read the source file as one full line per row.
+    # --- The Data tab will parse V1 using psDelimiter.
+    DatasourceType = 'CHARACTERDELIMITED';
+    DatasourceNameForServer = psSourceFile;
+
+    # --- Use a delimiter that should not occur in the source file.
+    # --- This keeps the full line available in V1.
+    DatasourceASCIIDelimiter = CHAR( 254 );
+    DatasourceASCIIQuoteCharacter = '';
+
+EndIf;
+
+
+#==============================================================================
+#                           DEBUG LOGGING
+#==============================================================================
+
+If( pnDebug = 1 );
+
+    AsciiOutput( sLogFile, 'aws_EmailFormatter started.' );
+    AsciiOutput( sLogFile, 'psSourceFile', psSourceFile );
+    AsciiOutput( sLogFile, 'psDelimiter', psDelimiter );
+    AsciiOutput( sLogFile, 'pnHasHeader', NumberToString( pnHasHeader ) );
+    AsciiOutput( sLogFile, 'pnFontSizePx', NumberToString( pnFontSizePx ) );
+    AsciiOutput( sLogFile, 'pnTableWidthPct', NumberToString( pnTableWidthPct ) );
+    AsciiOutput( sLogFile, 'pnMessageColumnWidthPct', NumberToString( pnMessageColumnWidthPct ) );
+
+    If( nContinue = FALSE );
+        AsciiOutput( sLogFile, 'Validation failed.', gsEmailFormatterError );
+    EndIf;
+
+EndIf;
+#endregion
+#region Data
+
+#==============================================================================
+#                           DATA TAB
+#==============================================================================
+# V1 contains the full source file row.
+# The business delimiter is psDelimiter.
+# Assumptions:
+#   - No embedded delimiters inside field values.
+#   - First row is treated as header when pnHasHeader = 1.
+#   - Last column is treated as the message column.
+
+If( nContinue = TRUE );
+
+    sLine = TRIM( V1 );
+
+    #--------------------------------------------------------------------------
+    # If the entire row is wrapped in double quotes, remove the outer quotes.
+    # Example: "Element,Parent,Message" -> Element,Parent,Message
+    #--------------------------------------------------------------------------
+    If( LONG( sLine ) >= 2 );
+        If( SUBST( sLine, 1, 1 ) @= '"' & SUBST( sLine, LONG( sLine ), 1 ) @= '"' );
+            sLine = SUBST( sLine, 2, LONG( sLine ) - 2 );
+        EndIf;
+    EndIf;
+
+    nRowCount = nRowCount + 1;
+
+    #--------------------------------------------------------------------------
+    # Determine column count from first row
+    #--------------------------------------------------------------------------
+    If( nColumnCount = 0 );
+
+        nColumnCount = 1;
+        sWorkLine = sLine;
+
+        nDelimiterPos = SCAN( psDelimiter, sWorkLine );
+
+        While( nDelimiterPos > 0 );
+            nColumnCount = nColumnCount + 1;
+            sWorkLine = SUBST( sWorkLine, nDelimiterPos + LONG( psDelimiter ), LONG( sWorkLine ) );
+            nDelimiterPos = SCAN( psDelimiter, sWorkLine );
+        End;
+
+    EndIf;
+
+    #--------------------------------------------------------------------------
+    # Start HTML row
+    #--------------------------------------------------------------------------
+    sHTML = sHTML | '<tr>';
+
+    #--------------------------------------------------------------------------
+    # Parse and render each column
+    #--------------------------------------------------------------------------
+    sWorkLine = sLine | psDelimiter;
+    nCurrentColumn = 1;
+
+    While( nCurrentColumn <= nColumnCount );
+
+        nDelimiterPos = SCAN( psDelimiter, sWorkLine );
+
+        If( nDelimiterPos > 0 );
+            sCellValue = SUBST( sWorkLine, 1, nDelimiterPos - 1 );
+            sWorkLine = SUBST( sWorkLine, nDelimiterPos + LONG( psDelimiter ), LONG( sWorkLine ) );
+        Else;
+            sCellValue = '';
+        EndIf;
+
+        sCellValue = TRIM( sCellValue );
+
+        If( sCellValue @= '' );
+            sCellValue = psBlankValue;
+        EndIf;
+
+        #----------------------------------------------------------------------
+        # Header row
+        #----------------------------------------------------------------------
+        If( pnHasHeader = 1 & nRowCount = 1 );
+
+            sHTML =
+                sHTML |
+                '<th style=''' | sHeaderCellStyle | '''>' |
+                sCellValue |
+                '</th>';
+
+            nHeaderLoaded = 1;
+
+        Else;
+
+            #------------------------------------------------------------------
+            # Data row
+            #------------------------------------------------------------------
+            If( nCurrentColumn = nColumnCount );
+
+                sHTML =
+                    sHTML |
+                    '<td style=''' | sMessageCellStyle | '''>' |
+                    sCellValue |
+                    '</td>';
+
+            Else;
+
+                sHTML =
+                    sHTML |
+                    '<td style=''' | sCenterCellStyle | '''>' |
+                    sCellValue |
+                    '</td>';
+
+            EndIf;
+
+        EndIf;
+
+        nCurrentColumn = nCurrentColumn + 1;
+
+    End;
+
+    sHTML = sHTML | '</tr>';
+
+EndIf;
+
+#endregion
+#region Epilog
+
+
+If( nContinue = TRUE );
+
+    sHTML = sHTML | '</table></body></html>';
+
+    If( nRowCount = 0 );
+        gsEmailFormatterStatus  = 'ERROR';
+        gsEmailFormatterMessage = '';
+        gsEmailFormatterError   = 'No rows were found in source file: ' | psSourceFile;
+    Else;
+        gsEmailFormatterStatus  = 'OK';
+        gsEmailFormatterMessage = sHTML;
+        gsEmailFormatterError   = '';
+    EndIf;
+
+Else;
+
+    gsEmailFormatterMessage = '';
+
+EndIf;
+
+
+If( pnDebug = 1 );
+
+    AsciiOutput( sLogFile, 'aws_EmailFormatter finished.' );
+    AsciiOutput( sLogFile, 'Status', gsEmailFormatterStatus );
+    AsciiOutput( sLogFile, 'Rows read', NumberToString( nRowCount ) );
+    AsciiOutput( sLogFile, 'Columns detected', NumberToString( nColumnCount ) );
+
+    If( gsEmailFormatterError @<> '' );
+        AsciiOutput( sLogFile, 'Error', gsEmailFormatterError );
+    EndIf;
+
+EndIf;
+
+#endregion

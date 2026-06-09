@@ -1,0 +1,12 @@
+{
+	"@type":"Dimension",
+	"Name":"Pyxis Config",
+	"Hierarchies@Code.links":
+	[
+		"Pyxis Config.hierarchies/Pyxis Config.json"
+	],
+	"DefaultHierarchy":
+	{
+		"@id":"Dimensions('Pyxis Config')/Hierarchies('Pyxis Config')"
+	}
+}
