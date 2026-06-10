@@ -1,0 +1,38 @@
+{
+	"@type":"Process",
+	"Name":"FSM MAESTRO - LOAD LEGAL NAMES",
+	"HasSecurityAccess":false,
+	"Code@Code.link":"FSM MAESTRO - LOAD LEGAL NAMES.ti",
+	"DataSource":
+	{
+		"Type":"ODBC",
+		"dataSourceNameForServer":"Maestro_1",
+		"dataSourceNameForClient":"Maestro_1",
+		"userName":"Infor_Fabric_Svc",
+		"password":"IBMtestsecret",
+		"query":"Select *\r\nFrom [FSM_EDW] . [dbo] . [AccountingEntity]\r\nwhere LegalEntitynamewl <> ' '\r\nand Status_State = 'Active'"
+	},
+	"Parameters":[],
+	"Variables":
+	[
+		{
+			"Name":"AccountingEntity",
+			"Type":"String",
+			"Position":3,
+			"StartByte":0,
+			"EndByte":0
+		},
+		{
+			"Name":"LegalEntityNameWL",
+			"Type":"String",
+			"Position":80,
+			"StartByte":0,
+			"EndByte":0
+		}
+	],
+	"UID": "17758339550008",
+	"VariablesUIData": [
+		"VarType=32\fColType=827\f",
+		"VarType=32\fColType=827\f"
+	]
+}
