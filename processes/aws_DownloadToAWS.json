@@ -1,0 +1,27 @@
+{
+	"@type":"Process",
+	"Name":"aws_DownloadToAWS",
+	"HasSecurityAccess":false,
+	"Code@Code.link":"aws_DownloadToAWS.ti",
+	"DataSource":
+	{
+		"Type":"None"
+	},
+	"Parameters":
+	[
+		{
+			"Name":"Filename",
+			"Prompt":"Filename to download",
+			"Value":"",
+			"Type":"String"
+		},
+		{
+			"Name":"SFTPPath",
+			"Prompt":"Path on the SFTP Server",
+			"Value":"",
+			"Type":"String"
+		}
+	],
+	"Variables":[],
+	"VariablesUIData": []
+}

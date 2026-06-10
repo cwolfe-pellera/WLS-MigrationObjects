@@ -1,0 +1,162 @@
+#region Prolog
+#==============================================================================
+#                             aws_SendMail
+#
+#  This script will issue a send mail request via an HTTP URL.   This is part
+#  of the AWS and Planning Analytics integration deployment.
+#
+#  Requirements:
+#      E-mail addresses must be setup and verified prior to sending
+#
+#     Date     WHO  Description
+#  ----------  ---  ----------------------------------------------------
+#  05/06/2024  SWG  Created
+#
+#==============================================================================
+#==============================================================================
+#                           SYNCHRONIZATION
+#==============================================================================
+LogOutput( 'INFO', Expand( 'aws_SendMail BEFORE SYNCHRONIZED psSync=%psSync%' ) );
+
+If( TRIM( psSync ) @<> '' );
+    SYNCHRONIZED( psSync );
+EndIf;
+
+LogOutput( 'INFO', Expand( 'aws_SendMail AFTER SYNCHRONIZED psSync=%psSync%' ) );
+
+#==============================================================================
+#                           CONFIGURATION SECTION
+#==============================================================================
+sUser = TM1User();
+sProcessName = GetProcessName();
+sTimeStamp = TIMST( NOW, '\Y-\m-\d(\h\i\s)' );
+sUniqueID = NumbertoString(INT(RAND()*10000));
+sUniqueName = Expand('%sProcessName%_%sTimeStamp%_%sUniqueID%' );
+sTempName = Expand('_tmp_%sUniqueName%' );
+
+sLogPath = '/Logs/Processes/';
+sLogFile = sLogPath | sUniqueName | '.log';
+
+# --- Values
+FALSE = 0;
+TRUE = 1;
+bDebug = FALSE;
+
+cubEmailFormatter = '}aws_EmailFormatter';
+sHTMLBodyMeasure = 'HTMLBody';
+sStatusMeasure = 'Status';
+sErrorMeasure = 'ErrorMessage';
+
+#==============================================================================
+#                        PARAMETER SECTION
+#==============================================================================
+sRecipients = RecipientList;
+#sSubject    = '"' | Subject | '"';
+#sMessage    = '"' | Message | '"';
+
+# 05/01/2026  Ty: added these to introduce more refined formatting and functionality for error reporting.
+sSubjectRaw = Subject;
+sMessageRaw = Message;
+
+sSourceFile = TRIM( psSourceFile );
+
+#==============================================================================
+#                           PROCESS LOGIC SECTION
+#==============================================================================
+sRecipientList = '';
+
+# --- Prepare to build the recipient list
+sList = TRIM( sRecipients );
+
+# --- Put a separator at the end if there isn't one already
+If( SUBST( sList, LONG( sList ), 1 ) @<> ';' ); sList = sList | ';'; EndIf;
+
+# --- Loop through all the items in the list
+nSepPos = SCAN( ';', sList );
+While( nSepPos > 0 );
+
+    # --- Extract the email address
+    sEmail = SUBST( sList, 1, nSepPos - 1 );
+    sList = SUBST( sList, nSepPos + 1, 255 );
+
+    # --- Build the address list
+    sRecipientList = sRecipientList | '"' | sEmail | '",';
+
+    # --- See if there are more addresses in the list
+    nSepPos = SCAN( ';', sList );
+    
+End;
+# --- Remove the trailing comma
+sRecipientList = SUBST( sRecipientList, 1, LONG( sRecipientList ) - 1 );
+
+#------------------------------------------------------------------------------
+#                       Optional HTML Table Formatting
+#------------------------------------------------------------------------------
+If( pnFormatFileAsHTMLTable = TRUE );
+
+    If( sSourceFile @= '' );
+
+        sMessageRaw =
+            '<html><body>' |
+            '<p><b>aws_SendMail warning:</b> HTML table formatting was requested, but psSourceFile was blank.</p>' |
+            '<p>' | sMessageRaw | '</p>' |
+            '</body></html>';
+
+    Else;
+
+        StringGlobalVariable( 'gsEmailFormatterStatus' );
+        StringGlobalVariable( 'gsEmailFormatterMessage' );
+        StringGlobalVariable( 'gsEmailFormatterError' );
+
+        gsEmailFormatterStatus = '';
+        gsEmailFormatterMessage = '';
+        gsEmailFormatterError = '';
+
+        ExecuteProcess(
+            'aws_EmailFormatter',
+            'psSourceFile', psSourceFile,
+            'psMessage', sMessageRaw
+        );
+
+        If( gsEmailFormatterStatus @= 'OK' );
+
+            sMessageRaw = gsEmailFormatterMessage;
+
+        Else;
+
+            If( gsEmailFormatterError @= '' );
+                gsEmailFormatterError = 'No errors reported by aws_EmailFormatter.';
+            EndIf;
+
+            sMessageRaw =
+                '<html><body>' |
+                '<p><b>aws_SendMail warning:</b> The email formatter did not return a formatted message.</p>' |
+                '<p><b>Source file:</b> ' | sSourceFile | '</p>' |
+                '<p><b>Error:</b> ' | gsEmailFormatterError | '</p>' |
+                '<p><b>Original message:</b></p>' |
+                '<p>' | sMessageRaw | '</p>' |
+                '</body></html>';
+
+        EndIf;
+
+    EndIf;
+
+EndIf;
+
+sSubject = '"' | sSubjectRaw | '"';
+sMessage = '"' | sMessageRaw | '"';
+
+#------------------------------------------------------------------------------
+#                       Prepare Message
+#------------------------------------------------------------------------------
+
+sBody = Expand( '{
+    "event": "sendmail",
+    "to":  [ %sRecipientList% ],
+    "subject": %sSubject%,
+    "message": %sMessage%
+}');
+
+# --- Execute the event
+ExecuteProcess( 'aws_PostEvent', 'EventBody', sBody );
+#endregion

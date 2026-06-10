@@ -1,0 +1,52 @@
+{
+	"@type":"Process",
+	"Name":"TM1 Export - Company Attributes History",
+	"HasSecurityAccess":false,
+	"Code@Code.link":"TM1 Export - Company Attributes History.ti",
+	"DataSource":
+	{
+		"Type":"TM1CubeView",
+		"dataSourceNameForServer":"COMPANY ATTRIBUTES",
+		"dataSourceNameForClient":"COMPANY ATTRIBUTES",
+		"view":"BI_TI_Export_2021_01_10"
+	},
+	"Parameters":[],
+	"Variables":
+	[
+		{
+			"Name":"COMPANY",
+			"Type":"String",
+			"Position":2,
+			"StartByte":0,
+			"EndByte":0
+		},
+		{
+			"Name":"DAYS",
+			"Type":"String",
+			"Position":1,
+			"StartByte":0,
+			"EndByte":0
+		},
+		{
+			"Name":"V3",
+			"Type":"String",
+			"Position":3,
+			"StartByte":0,
+			"EndByte":0
+		},
+		{
+			"Name":"Value",
+			"Type":"String",
+			"Position":4,
+			"StartByte":0,
+			"EndByte":0
+		}
+	],
+	"UID": "17758339730000",
+	"VariablesUIData": [
+		"VarType=32\fColType=827\f",
+		"VarType=32\fColType=827\f",
+		"VarType=32\fColType=827\f",
+		"VarType=32\fColType=827\f"
+	]
+}

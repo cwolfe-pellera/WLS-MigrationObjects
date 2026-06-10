@@ -1,0 +1,16 @@
+{
+	"@type":"Hierarchy",
+	"Name":"Pyxis Config",
+	"Elements":
+	[
+		{
+			"Name":"AWS",
+			"Type":"Numeric"
+		},
+		{
+			"Name":"Pyxis",
+			"Type":"Numeric"
+		}
+	],
+	"Subsets@Code.links":[]
+}

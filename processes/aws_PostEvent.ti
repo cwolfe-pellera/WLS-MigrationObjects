@@ -1,0 +1,72 @@
+#region Prolog
+#==============================================================================
+#                             aws_PostEvent
+#
+#  This script will issue post an event request to the AWS SQS event bus
+#  for processing.
+#
+#     Date     WHO  Description
+#  ----------  ---  ----------------------------------------------------
+#  05/06/2024  SWG  Created
+#
+#==============================================================================
+
+#==============================================================================
+#                           CONFIGURATION SECTION
+#==============================================================================
+sUser = TM1User();
+sProcessName = GetProcessName();
+sTimeStamp = TIMST( NOW, '\Y-\m-\d(\h\i\s)' );
+sUniqueID = NumbertoString(INT(RAND()*10000));
+sUniqueName = Expand('%sProcessName%_%sTimeStamp%_%sUniqueID%' );
+sTempName = Expand('_tmp_%sUniqueName%' );
+
+sLogPath = '/Logs/Processes/';
+sLogFile = sLogPath | sUniqueName | '.log';
+
+# --- Values
+FALSE = 0;
+TRUE = 1;
+bDebug = TRUE;
+
+#==============================================================================
+#                        PARAMETER SECTION
+#==============================================================================
+sBody = EventBody;
+
+#==============================================================================
+#                           PROCESS LOGIC SECTION
+#==============================================================================
+# ---  AWS URL and Key Values
+sEventUrl = CellGetS( 'Pyxis Config', 'AWS', 'API URL' );
+sEventKey = CellGetS( 'Pyxis Config', 'AWS', 'API Key' );
+
+sHeader = Expand( 'x-api-key:%sEventKey%');
+sContentType = '-h Content-Type:application/json';
+
+#------------------------------------------------------------------------------
+#                       Send Message via HTTP
+#------------------------------------------------------------------------------
+If( bDebug = TRUE );
+    AsciiOutput( sLogFile, 'POST ' | sEventUrl | ' -h ' | sHeader | ' -d ' | sBody );
+EndIf;
+
+sMsg = Expand('POST %sEventUrl% -h %sHeader% -d %sBody% ');
+LogOutput( 'INFO', sMsg );
+
+
+# --- Run the HTTP request and get the response
+ExecuteHttpRequest( 'POST', sEventUrl, '-h ' | sHeader, sContentType, '-d ' | sBody );
+nResponseStatus = HttpResponseGetStatusCode();
+sResponseBody = HttpResponseGetBody();
+
+If( nResponseStatus <> 200 );
+    If( bDebug = TRUE );
+        AsciiOutput( sLogFile, 'Status Code', NumberToString( nResponseStatus ));
+        AsciiOutput( sLogFile, 'Body', sResponseBody );
+    EndIf;
+
+    ItemReject( sResponseBody );
+    ProcessQuit;    
+EndIf;
+#endregion

@@ -1,0 +1,64 @@
+#region Prolog
+
+#****Begin: Generated Statements***
+#****End: Generated Statements****
+
+header=1;
+
+# --- Constants
+cubEmailConfig = 'sys_Email Config';
+sDownloadsDir = 'downloads';
+sSFTPOutDir = 'CompanyAttributes';
+vFilename = Expand( '%sDownloadsDir%/Company_Attributes_History.csv' );
+vOutputFile = Expand( '%sSFTPOutDir%/Company_Attributes_History.csv' );
+
+sUser = TM1User();
+sProcessName = GetProcessName();
+sTimeStamp = TIMST( NOW, '\Y-\m-\d(\h\i\s)' );
+sUniqueID = NumbertoString(INT(RAND()*10000));
+sUniqueName = Expand('%sProcessName%_%sTimeStamp%_%sUniqueID%' );
+sTempName = Expand('_tmp_%sUniqueName%' );
+
+#endregion
+#region Metadata
+
+#****Begin: Generated Statements***
+Prop_ID=SUBST(COMPANY,1,4);
+#****End: Generated Statements****
+#endregion
+#region Data
+
+#****Begin: Generated Statements***
+Prop_ID=SUBST(COMPANY,1,4);
+#****End: Generated Statements****
+
+if(header=1);
+    Asciioutput(vFilename, 'Property','Prop_ID','Date', 'Attribute', 'Attribute_Value');
+# Asciioutput('\\wls-fs-01\DataConsumption\BI_Share\TM1\Company_Attributes_History.csv', 'Property','Prop_ID','Date', 'Attribute', 'Attribute_Value');
+header=header-1;
+endif;
+Asciioutput(vFilename, COMPANY,Prop_ID,DAYS, V3, Value);
+
+# Asciioutput('\\wls-fs-01\DataConsumption\BI_Share\TM1\Company_Attributes_History.csv', COMPANY,Prop_ID,DAYS, V3, Value);
+#endregion
+#region Epilog
+
+# vOutputFile = '';
+ExecuteProcess( 'aws_DownloadToAWS',
+	'Filename', vFilename, 'SFTPPath', vOutputFile );
+
+
+sReturnType = Expand('File % vFilename% downloaded to: %vOutputFile%');
+
+sEmailMsg = Expand('%sTimeStamp% %sReturnType%');
+sSubject = Expand('Process Script: %sProcessName%');
+sRecipients = LOWER(CellGetS( cubEmailConfig, sProcessName, 'Recipients' ));
+sMsg = Expand('%cubEmailConfig% %sProcessName% %sRecipients%');
+LogOutput( 'INFO', sMsg );
+
+
+ExecuteProcess( 'aws_SendMail', 'RecipientList', sRecipients, 'Subject', sSubject, 'Message', sEmailMsg );
+
+#****Begin: Generated Statements***
+#****End: Generated Statements****
+#endregion
